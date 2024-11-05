@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>FIT File Decoder</title>
+    <script src="wasm_exec.js"></script>
+  </head>
+  <body>
+    <input type="file" id="fileInput" />
+    <pre id="output"></pre>
+
+    <script>
+      async function loadWasm() {
+        const go = new Go();
+        const wasm = await WebAssembly.instantiateStreaming(fetch('main.wasm'), go.importObject);
+        go.run(wasm.instance);
+      }
+
+      async function decodeFitFile(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // 使用 WebAssembly 中的 decodeFit 函數
+        const result = decodeFit(uint8Array);
+        const parsedData = JSON.parse(result);
+
+        console.log(parsedData);
+
+        // 格式化輸出
+        const output = parsedData.Laps.map((lap) => {
+          return `
+          Start Time: ${lap.StartTime}
+          Total Timer Time: ${lap.TotalTimerTime / 1000}s
+          Total Distance: ${lap.TotalDistance / 100}m
+        `;
+        }).join('\n');
+
+        document.getElementById('output').textContent = output;
+      }
+
+      document.getElementById('fileInput').addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          await decodeFitFile(file);
+        }
+      });
+
+      loadWasm();
+    </script>
+  </body>
+</html>
